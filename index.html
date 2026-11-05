@@ -213,6 +213,7 @@
   <div class="reward" id="winReward" style="display:none"></div>
   <button class="btn" id="nextBtn">Niveau suivant</button>
   <button class="btn ghost" id="doubleBtn">Regarder une pub</button>
+  <button class="btn ghost" id="winHome">⌂ Accueil</button>
 </div></div>
 
 <!-- Échec -->
@@ -223,6 +224,7 @@
   <button class="btn" id="reviveBtn">+1 vie (pub simulée)</button>
   <button class="btn ghost" id="buyBtn">+1 vie : 40 ●</button>
   <button class="btn ghost" id="retryBtn">Recommencer le niveau</button>
+  <button class="btn ghost" id="failHome">⌂ Accueil</button>
 </div></div>
 
 <!-- Pub simulée -->
@@ -1002,6 +1004,8 @@ $('doubleBtn').onclick = () => watchAd(() => { save.coins += G.gain; persist(); 
 $('reviveBtn').onclick = () => { overlay('failOv', false); watchAd(revive); };
 $('buyBtn').onclick = () => { if (save.coins < 40) return; save.coins -= 40; save.stats.lives++; persist(); overlay('failOv', false); revive(); };
 $('retryBtn').onclick = () => { overlay('failOv', false); startLevel(G.L); };
+$('winHome').onclick = () => { overlay('winOv', false); G = null; show('home'); };
+$('failHome').onclick = () => { overlay('failOv', false); G = null; show('home'); };
 window.addEventListener('resize', layout);
 
 renderHome();
