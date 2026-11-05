@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0f1630">
+<title>Déclic — prototype</title>
+<style>
+  :root{
+    --bg1:#0f1630; --bg2:#1b2a5c; --ink:#f4f6ff; --muted:#a9b3d6; --card:#16214a; --line:rgba(255,255,255,.12);
+    --up:#4f8cff; --right:#ff7a59; --down:#22c08a; --left:#f4b13a; --danger:#ff4d6d; --gold:#ffd34d; --ice:#bfe6ff;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+  html,body{margin:0;height:100%;overflow:hidden;background:radial-gradient(120% 90% at 50% 0%,var(--bg2),var(--bg1));color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  button{font:inherit;color:inherit;border:0;cursor:pointer}
+  .screen{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;padding:calc(env(safe-area-inset-top) + 10px) 14px calc(env(safe-area-inset-bottom) + 12px)}
+  .screen.on{display:flex}
+  /* Accueil */
+  #home{justify-content:center;gap:12px;text-align:center}
+  .logo{font-size:56px;font-weight:800;letter-spacing:-1px;margin:0;line-height:1}
+  .logo span{color:var(--gold)}
+  .tagline{color:var(--muted);margin:0 0 6px}
+  .homestats{display:flex;gap:8px;justify-content:center;margin-bottom:8px;flex-wrap:wrap}
+  .logo-tiles{display:flex;gap:8px;justify-content:center;margin-bottom:6px}
+  .btn{background:var(--gold);color:#1a1a2e;font-weight:700;font-size:18px;padding:15px 28px;border-radius:16px;min-width:240px;box-shadow:0 6px 0 #c9a12a;transition:transform .08s}
+  .btn:active{transform:translateY(4px);box-shadow:0 2px 0 #c9a12a}
+  .btn.ghost{background:rgba(255,255,255,.08);color:var(--ink);box-shadow:none;font-weight:600;font-size:16px;padding:12px 22px}
+  .btn:disabled{opacity:.4}
+  .proto{position:absolute;bottom:calc(env(safe-area-inset-bottom) + 10px);left:0;right:0;text-align:center;font-size:12px;color:var(--muted)}
+  /* Jeu */
+  #game{gap:8px;justify-content:center}
+  .row{width:100%;max-width:520px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .pill{background:rgba(255,255,255,.08);border-radius:999px;padding:7px 12px;font-weight:700;display:flex;align-items:center;gap:6px;font-size:15px;white-space:nowrap}
+  .iconbtn{background:rgba(255,255,255,.08);border-radius:12px;width:40px;height:40px;display:grid;place-items:center;font-size:18px;flex:none}
+  .hearts{letter-spacing:1px;font-size:17px}
+  .hearts .sh{font-size:15px;margin-left:2px}
+  .lvl{font-weight:800;font-size:19px;line-height:1.1;text-align:center}
+  .lvl small{display:block;font-size:11.5px;font-weight:600;color:var(--muted)}
+  .tag{font-size:12.5px;font-weight:700;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.08);white-space:nowrap}
+  .tag.hard{background:rgba(255,77,109,.2);color:#ffb3c1}
+  .streak{font-size:12.5px;font-weight:700;color:#ffb36b;white-space:nowrap}
+  .timebox{flex:1;display:flex;align-items:center;gap:8px}
+  .timebar{flex:1;height:10px;border-radius:5px;background:rgba(255,255,255,.08);overflow:hidden}
+  .timebar i{display:block;height:100%;width:100%;background:var(--gold);border-radius:5px;transition:width .1s linear,background .3s}
+  .timebar.low i{background:var(--danger)}
+  .timebar.frozen i{background:var(--ice)}
+  #timer{font-weight:800;font-size:17px;font-variant-numeric:tabular-nums;min-width:48px;text-align:right}
+  #timer.low{color:var(--danger)}
+  #timer.frozen{color:var(--ice)}
+  .hint{min-height:20px;color:var(--muted);font-size:13.5px;text-align:center;max-width:520px}
+  #board{position:relative;border-radius:18px;overflow:hidden;background:#0b1128;box-shadow:0 10px 30px rgba(0,0,0,.35), inset 0 0 0 1px var(--line);touch-action:manipulation}
+  #motif{position:absolute;inset:0;width:100%;height:100%}
+  #veil{position:absolute;inset:0;background:rgba(11,17,40,.55);transition:opacity .6s}
+  #tiles{position:absolute;inset:0}
+  #board.shake{animation:shake .3s}
+  @keyframes shake{0%,100%{translate:0}25%{translate:-6px}75%{translate:6px}}
+  #board.shielded{box-shadow:0 0 0 3px #7fd1ff, 0 10px 30px rgba(0,0,0,.35)}
+
+  /* Tuiles */
+  .tile{position:absolute;border-radius:22%;display:grid;place-items:center;transition:transform .24s cubic-bezier(.2,.75,.3,1),opacity .24s,border-radius .3s;will-change:transform;box-shadow:inset 0 -4px 0 rgba(0,0,0,.18), 0 2px 6px rgba(0,0,0,.25)}
+  .tile svg.arrow{width:54%;height:54%;position:relative;z-index:2;filter:drop-shadow(0 1px 1px rgba(0,0,0,.25))}
+  .tile.u{background-color:var(--up)} .tile.r{background-color:var(--right)} .tile.d{background-color:var(--down)} .tile.l{background-color:var(--left)}
+  /* Habillages par monde (dessins sur les tuiles) */
+  .skin1{background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.18) 0 6px,transparent 6px 14px)}
+  .skin2{background-image:radial-gradient(rgba(255,255,255,.28) 18%,transparent 20%),radial-gradient(rgba(255,255,255,.28) 18%,transparent 20%);background-size:16px 16px;background-position:0 0,8px 8px}
+  .skin3{border-radius:50% !important;background-image:radial-gradient(circle at 50% 50%,transparent 52%,rgba(255,255,255,.25) 53%,rgba(255,255,255,.25) 60%,transparent 61%)}
+  .skin4{border-radius:14% !important;background-image:linear-gradient(45deg,rgba(0,0,0,.14) 25%,transparent 25%,transparent 75%,rgba(0,0,0,.14) 75%),linear-gradient(45deg,rgba(0,0,0,.14) 25%,transparent 25%,transparent 75%,rgba(0,0,0,.14) 75%);background-size:18px 18px;background-position:0 0,9px 9px}
+  .tile.stone{background:#5a6074;background-image:radial-gradient(rgba(0,0,0,.25) 12%,transparent 14%),radial-gradient(rgba(255,255,255,.12) 10%,transparent 12%);background-size:14px 14px,11px 11px;background-position:2px 3px,7px 6px;border-radius:30%;box-shadow:inset 0 -5px 0 rgba(0,0,0,.3)}
+  .tile.ice .arrow{z-index:4}
+  .tile.ice::after{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(135deg,rgba(225,245,255,.58),rgba(170,215,255,.32));box-shadow:inset 0 0 0 2px rgba(255,255,255,.8);z-index:3}
+  .tile.ice2::after{background:linear-gradient(135deg,rgba(235,250,255,.8),rgba(180,220,255,.6))}
+  .tile.ice.cracked::before{content:"";position:absolute;inset:18%;z-index:4;background:linear-gradient(60deg,transparent 46%,rgba(255,255,255,.95) 48%,transparent 50%),linear-gradient(-30deg,transparent 46%,rgba(255,255,255,.95) 48%,transparent 50%)}
+  .badge{position:absolute;z-index:5;top:2px;right:2px;width:19px;height:19px;border-radius:50%;border:2px solid rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;font-size:10px;line-height:1;font-weight:800;color:#1a1a2e;box-shadow:0 2px 4px rgba(0,0,0,.35);gap:1px}
+  .tile.locked .arrow{opacity:.6}
+  .tile.locked::before{content:"";position:absolute;inset:0;border-radius:inherit;background:rgba(10,15,35,.35);z-index:1}
+  .tile.unlocking{animation:pop .35s}
+  @keyframes pop{50%{transform:scale(1.12)}}
+  .tile.hit{animation:hit .3s}
+  .tile.nope{animation:nope .25s}
+  .tile.hinted{animation:pulse .9s infinite}
+  @keyframes hit{0%,100%{filter:none}40%{filter:brightness(1.6) saturate(.4)}}
+  @keyframes nope{25%{translate:-4px}75%{translate:4px}}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,211,77,.9)}50%{box-shadow:0 0 0 7px rgba(255,211,77,0)}}
+
+  /* Boosters et outils */
+  .boosters{width:100%;max-width:520px;display:flex;gap:8px;justify-content:center}
+  .boost{flex:1;max-width:120px;background:rgba(255,255,255,.08);border-radius:14px;padding:8px 6px;display:flex;flex-direction:column;align-items:center;gap:1px;position:relative}
+  .boost .ic{font-size:21px;line-height:1.1}
+  .boost .nm{font-size:12px;font-weight:700}
+  .boost .ct{position:absolute;top:-6px;right:-4px;background:var(--gold);color:#1a1a2e;font-size:12px;font-weight:800;border-radius:10px;min-width:20px;height:20px;padding:0 5px;display:grid;place-items:center}
+  .boost .ct.buy{background:#2b3a72;color:var(--gold);font-size:11px}
+  .boost.active{box-shadow:inset 0 0 0 2px #7fd1ff}
+  .tools{width:100%;max-width:520px;display:flex;gap:8px;justify-content:center}
+  .tool{background:rgba(255,255,255,.06);border-radius:12px;padding:9px 13px;font-weight:600;font-size:14px;display:flex;align-items:center;gap:6px;white-space:nowrap}
+  .tool small{color:var(--gold);font-weight:700}
+
+  /* Overlays */
+  .overlay{position:absolute;inset:0;background:rgba(5,9,25,.74);display:none;align-items:center;justify-content:center;padding:18px;z-index:10;backdrop-filter:blur(3px)}
+  .overlay.on{display:flex}
+  .card{background:var(--card);border-radius:22px;padding:22px 20px;width:100%;max-width:370px;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.5);border:1px solid var(--line);display:flex;flex-direction:column;gap:11px;align-items:center;max-height:100%;overflow-y:auto}
+  .card h2{margin:0;font-size:25px}
+  .card p{margin:0;color:var(--muted)}
+  .stars{font-size:34px;letter-spacing:4px;color:var(--gold)}
+  .stars .off{color:rgba(255,255,255,.15)}
+  .thumb{width:120px;height:120px;border-radius:14px;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.4);flex:none}
+  .thumb canvas{width:100%;height:100%;display:block}
+  .gains{width:100%;display:grid;grid-template-columns:1fr auto;gap:3px 10px;font-size:14px;text-align:left}
+  .gains div:nth-child(odd){color:var(--muted)}
+  .gains .tot{color:var(--ink) !important;font-weight:800;border-top:1px solid var(--line);padding-top:4px}
+  .chestbar{width:100%}
+  .chestbar .lbl{display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted);margin-bottom:4px}
+  .bar{width:100%;height:9px;border-radius:5px;background:rgba(255,255,255,.08);overflow:hidden}
+  .bar i{display:block;height:100%;background:var(--gold);border-radius:5px;transition:width .6s}
+  .reward{background:rgba(255,211,77,.12);border:1px solid rgba(255,211,77,.4);border-radius:14px;padding:10px 12px;font-weight:700;color:var(--gold);width:100%}
+  .ad .count{font-size:44px;font-weight:800;color:var(--gold)}
+  .days{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;width:100%}
+  .day{border-radius:10px;background:rgba(255,255,255,.06);padding:7px 2px;font-size:11px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px}
+  .day b{font-size:17px}
+  .day.done{background:rgba(34,192,138,.18);color:#9ff0cf}
+  .day.today{background:rgba(255,211,77,.18);color:var(--gold);box-shadow:inset 0 0 0 2px var(--gold)}
+  .mech{display:flex;gap:12px;align-items:center;text-align:left;width:100%;background:rgba(255,255,255,.05);border-radius:14px;padding:10px}
+  .mech .demo{width:50px;height:50px;flex:none;position:relative}
+  .mech .demo .tile{position:absolute;inset:0;width:100%;height:100%}
+  .mech p{font-size:14px;line-height:1.35}
+  .mech b{color:var(--ink)}
+  /* Album */
+  #album{gap:12px}
+  .head{width:100%;max-width:520px;display:flex;align-items:center;gap:12px}
+  .head h2{margin:0;font-size:22px;flex:1}
+  .grid{width:100%;max-width:520px;display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px;overflow-y:auto;padding-bottom:20px;align-content:start;flex:1;min-height:0}
+  .cell{height:0;padding-bottom:100%;border-radius:12px;overflow:hidden;background:rgba(255,255,255,.06);position:relative;color:var(--muted);font-weight:700}
+  .cell b{position:absolute;inset:0;display:grid;place-items:center}
+  .cell canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .cell span{position:absolute;bottom:4px;left:6px;font-size:11px;color:#fff;text-shadow:0 1px 3px #000}
+  .statlist{width:100%;text-align:left;display:grid;grid-template-columns:1fr auto;gap:5px 12px;font-size:14.5px}
+  .statlist div:nth-child(odd){color:var(--muted)}
+  .help{text-align:left;color:var(--muted);font-size:14.5px;line-height:1.45;margin:0;padding-left:18px}
+  input,textarea{user-select:text;-webkit-user-select:text;font:inherit;color:var(--ink);background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:12px;padding:10px 12px;width:100%}
+  textarea{min-height:110px;resize:vertical;font-size:13px}
+  .lb{width:100%;display:flex;flex-direction:column;gap:4px;text-align:left;font-size:14px}
+  .lb div{display:flex;justify-content:space-between;gap:8px;background:rgba(255,255,255,.05);border-radius:10px;padding:6px 10px}
+  .lb b{color:var(--gold)}
+  .small{font-size:12.5px !important}
+  .sel{user-select:text !important;-webkit-user-select:text !important;word-break:break-word}
+</style>
+</head>
+<body>
+
+<!-- Accueil -->
+<section id="home" class="screen on">
+  <div class="logo-tiles" id="logoTiles"></div>
+  <h1 class="logo">Déc<span>l</span>ic</h1>
+  <p class="tagline">Libérez les flèches avant la fin du chrono.</p>
+  <div class="homestats" id="homeStats"></div>
+  <button class="btn" id="playBtn">Jouer</button>
+  <button class='btn ghost' id='dcBtn'>🏆 Défi du jour</button>
+  <button class="btn ghost" id="dailyBtn">🎁 Récompense du jour</button>
+  <button class="btn ghost" id="albumBtn">Album des motifs</button>
+  <button class="btn ghost" id="helpBtn">Comment jouer</button>
+  <button class="btn ghost" id="statsBtn">Stats testeur</button>
+  <div class="proto">Prototype de test · version 5 · les publicités sont simulées</div>
+</section>
+
+<!-- Jeu -->
+<section id="game" class="screen">
+  <div class="row">
+    <button class="iconbtn" id="homeBtn" aria-label="Accueil">⌂</button>
+    <div class="lvl"><span id="lvlLabel">Niveau 1</span><small id="worldLabel">Monde 1 · Classique</small></div>
+    <div class="pill hearts" id="hearts">❤❤❤</div>
+    <div class="pill" id="coins">● 60</div>
+  </div>
+  <div class="row">
+    <span class="tag" id="levelTag">Normal</span>
+    <div class="timebox"><div class="timebar" id="timebar"><i id="timefill"></i></div><span id="timer">30 s</span></div>
+    <span class="streak" id="streakLabel"></span>
+  </div>
+  <div class="hint" id="hintText"></div>
+  <div id="board">
+    <canvas id="motif"></canvas>
+    <div id="veil"></div>
+    <div id="tiles"></div>
+  </div>
+  <div class="boosters">
+    <button class="boost" id="bFreeze"><span class="ic">❄️</span><span class="nm">Gel 10 s</span><span class="ct" id="cFreeze">0</span></button>
+    <button class="boost" id="bShield"><span class="ic">🛡️</span><span class="nm">Bouclier</span><span class="ct" id="cShield">0</span></button>
+    <button class="boost" id="bBolt"><span class="ic">⚡</span><span class="nm">Éclair ×3</span><span class="ct" id="cBolt">0</span></button>
+  </div>
+  <div class="tools">
+    <button class="tool" id="hintBtn">💡 Indice <small>30 ●</small></button>
+    <button class="tool" id="restartBtn">↻ Recommencer</button>
+    <button class="tool" id="soundBtn" aria-label="Son">🔊</button>
+  </div>
+</section>
+
+<!-- Album -->
+<section id="album" class="screen">
+  <div class="head">
+    <button class="iconbtn" id="albumBack" aria-label="Retour">←</button>
+    <h2>Album des motifs</h2>
+    <div class="pill" id="albumCount">0</div>
+  </div>
+  <div class="grid" id="albumGrid"></div>
+</section>
+
+<!-- Victoire -->
+<div class="overlay" id="winOv"><div class="card">
+  <h2 id="winTitle">Bravo !</h2>
+  <div class="stars" id="winStars"></div>
+  <div class="thumb"><canvas id="winThumb" width="240" height="240"></canvas></div>
+  <p id="winName"></p>
+  <div class="gains" id="winGains"></div>
+  <div class="chestbar"><div class="lbl"><span>Coffre d'étoiles</span><span id="chestTxt"></span></div><div class="bar"><i id="chestFill"></i></div></div>
+  <div class="reward" id="winReward" style="display:none"></div>
+  <button class="btn" id="nextBtn">Niveau suivant</button>
+  <button class="btn ghost" id="doubleBtn">Regarder une pub</button>
+</div></div>
+
+<!-- Échec -->
+<div class="overlay" id="failOv"><div class="card">
+  <h2 id="failTitle">Plus de vies</h2>
+  <p id="failText"></p>
+  <p id="failStreak" style="color:#ffb36b"></p>
+  <button class="btn" id="reviveBtn">+1 vie (pub simulée)</button>
+  <button class="btn ghost" id="buyBtn">+1 vie : 40 ●</button>
+  <button class="btn ghost" id="retryBtn">Recommencer le niveau</button>
+</div></div>
+
+<!-- Pub simulée -->
+<div class="overlay" id="adOv"><div class="card ad">
+  <p>Publicité simulée</p>
+  <div class="count" id="adCount">3</div>
+  <p>Dans la version finale : une vidéo de 15 à 30 secondes.</p>
+</div></div>
+
+<!-- Récompense du jour -->
+<div class="overlay" id="dailyOv"><div class="card">
+  <h2>Récompense du jour</h2>
+  <p id="dailyText">Revenez chaque jour : la 7e récompense est un gros coffre.</p>
+  <div class="days" id="days"></div>
+  <div class="reward" id="dailyReward"></div>
+  <button class="btn" id="claimBtn">Récupérer</button>
+</div></div>
+
+<!-- Nouvelle mécanique -->
+<div class="overlay" id="mechOv"><div class="card">
+  <h2>Nouveau !</h2>
+  <div id="mechList" style="display:flex;flex-direction:column;gap:8px;width:100%"></div>
+  <button class="btn" data-close>J'ai compris</button>
+</div></div>
+
+<!-- Aide -->
+<div class="overlay" id="helpOv"><div class="card">
+  <h2>Comment jouer</h2>
+  <ul class="help">
+    <li>Touchez une flèche : elle glisse dans sa direction et sort si la voie est libre.</li>
+    <li>Si une tuile bloque, elle cogne : vous perdez une vie.</li>
+    <li>Videz la grille avant la fin du chrono. Le temps restant rapporte des pièces.</li>
+    <li>Cadenas : la tuile ne bouge qu'une fois sortie la clé de la même couleur. Pierres : elles ne bougent jamais. Glace : touchez pour la briser avant de déplacer la tuile.</li>
+    <li>Boosters : Gel (arrête le chrono 10 s), Bouclier (le prochain choc est gratuit), Éclair (fait sortir 3 tuiles libres).</li>
+    <li>Série de victoires : à 3 victoires d'affilée, bouclier offert ; à 5, +5 secondes.</li>
+  </ul>
+  <button class="btn" data-close>Compris</button>
+</div></div>
+
+<!-- Défi du jour -->
+<div class='overlay' id='dcOv'><div class='card'>
+  <h2>🏆 Défi du jour</h2>
+  <p id='dcDate' class='small'></p>
+  <p class='small'>3 grilles enchaînées, un seul chrono, 3 vies. Kit identique pour tous : 1 Gel + 1 Bouclier. Pas d’indice, pas d’Éclair, pas de relance. 1 essai par jour, +1 avec une pub.</p>
+  <div class='reward' id='dcBest'></div>
+  <input id='dcPseudo' maxlength='16' placeholder='Votre pseudo (pour le classement)'>
+  <button class='btn' id='dcPlay'>Jouer</button>
+  <button class='btn ghost' id='dcAd'>Essai supplémentaire (pub simulée)</button>
+  <button class='btn ghost' id='dcShare'>Copier mon score</button>
+  <div class='lb' id='dcLb'></div>
+  <button class='btn ghost' id='dcGroup'>Classement par codes (secours)</button>
+  <div class='lb' id='dcHist'></div>
+  <p class='small'>Seuls votre pseudo et vos scores sont enregistrés dans le classement. Aucun e-mail, aucune donnée personnelle.</p>
+  <button class='btn ghost' data-close>Fermer</button>
+</div></div>
+
+<div class='overlay' id='dcEndOv'><div class='card'>
+  <h2 id='dcEndTitle'></h2>
+  <div class='gains' id='dcEndGains'></div>
+  <p id='dcEndBest'></p>
+  <div class='lb' id='dcEndLb'></div>
+  <p class='small sel' id='dcEndLine'></p>
+  <button class='btn' id='dcEndShare'>Copier mon score</button>
+  <button class='btn ghost' id='dcEndBack'>Retour au Défi</button>
+</div></div>
+
+<div class='overlay' id='grpOv'><div class='card'>
+  <h2>Classement du groupe</h2>
+  <p class='small'>Collez ici les messages de score reçus (WhatsApp ou autre). Chaque code est vérifié et le meilleur score de chaque pseudo est retenu.</p>
+  <textarea id='grpIn' placeholder='Déclic · Défi 2026-11-04 · Awa · 2450 pts · 3/3 · code …'></textarea>
+  <button class='btn' id='grpGo'>Établir le classement</button>
+  <div class='lb' id='grpOut'></div>
+  <button class='btn ghost' id='grpCopy' style='display:none'>Copier le classement</button>
+  <button class='btn ghost' data-close>Fermer</button>
+</div></div>
+
+<!-- Stats -->
+<div class="overlay" id="statsOv"><div class="card">
+  <h2>Stats testeur</h2>
+  <p>À envoyer après vos parties de test.</p>
+  <div class="statlist" id="statList"></div>
+  <button class="btn" id="copyStats">Copier mes stats</button>
+  <button class="btn ghost" data-close>Fermer</button>
+</div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(() => {
+'use strict';
+
+/* ---------- Stockage ---------- */
+const KEY = 'declic-proto-v1';
+const VERSION = 5;
+const freshStats = () => ({ attempts: 0, wins: 0, fails: 0, timeouts: 0, restarts: 0, bumps: 0, shieldSaves: 0, hints: 0,
+  freeze: 0, shield: 0, bolt: 0, boostersBought: 0, lives: 0, ads: 0, daily: 0, chests: 0, bestStreak: 0, playMs: 0, sessions: 0,
+  dcPlays: 0, dcDone: 0, days: [], firstSeen: Date.now() });
+const defaults = () => ({ v: VERSION, level: 1, maxLevel: 1, coins: 80, sound: true, inv: { freeze: 2, shield: 1, bolt: 1 },
+  seen: [], daily: { last: null, day: 0 }, streak: 0, starPool: 0, stats: freshStats(), dc: { date: null, tries: 0, adTry: false, hist: [] }, pseudo: '' });
+let save = load();
+save.v = VERSION;
+function load(){
+  try {
+    const s = JSON.parse(localStorage.getItem(KEY));
+    if (s && s.stats){
+      if ((s.v || 0) < 3) return Object.assign(defaults(), { maxLevel: s.maxLevel || 1, level: s.level || 1, coins: Math.max(80, s.coins || 0), sound: s.sound !== false });
+      const d = defaults();
+      return Object.assign(d, s, { inv: Object.assign(d.inv, s.inv), daily: Object.assign(d.daily, s.daily), stats: Object.assign(freshStats(), s.stats) });
+    }
+  } catch(e){}
+  return defaults();
+}
+function persist(){ try { localStorage.setItem(KEY, JSON.stringify(save)); } catch(e){} }
+function today(off = 0){ const d = new Date(Date.now() + off * 864e5); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+save.stats.sessions++;
+if (!save.stats.days.includes(today())) save.stats.days.push(today());
+persist();
+
+/* ---------- Hasard reproductible ---------- */
+function rng(seed){ let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+
+/* ---------- Sons ---------- */
+let actx = null;
+function beep(freqs, dur = .09, type = 'sine', vol = .08){
+  if (!save.sound) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    let t = actx.currentTime;
+    freqs.forEach(f => { const o = actx.createOscillator(), g = actx.createGain(); o.type = type; o.frequency.value = f; g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + dur); o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t + dur); t += dur * .8; });
+  } catch(e){}
+}
+const sfx = { out: () => beep([520, 780], .07, 'triangle'), bump: () => beep([110], .16, 'square', .06), win: () => beep([523, 659, 784, 1046], .12, 'triangle'),
+  click: () => beep([400], .04), crack: () => beep([1400, 900], .05, 'square', .04), unlock: () => beep([880, 1320], .06, 'triangle'), nope: () => beep([160], .08, 'square', .04),
+  shield: () => beep([600, 400], .08, 'sine'), freeze: () => beep([1200, 1600, 2000], .06, 'sine', .05), tick: () => beep([1000], .03, 'square', .03) };
+function buzz(ms){ try { navigator.vibrate && navigator.vibrate(ms); } catch(e){} }
+
+/* ---------- Niveaux ---------- */
+const DIRS = { u: [-1, 0], r: [0, 1], d: [1, 0], l: [0, -1] };
+const ROT = { u: 0, r: 90, d: 180, l: 270 };
+const SYMS = [{ n: 'jaune', c: '#ffd34d' }, { n: 'bleue', c: '#7fd1ff' }, { n: 'verte', c: '#b8f28a' }, { n: 'rose', c: '#ff8fb8' }];
+const MECHS = [
+  { id: 'lock', from: 6, name: 'Cadenas et clés', text: 'Une tuile à <b>cadenas</b> ne bouge pas tant que la tuile <b>clé</b> de la même couleur n\'est pas sortie.' },
+  { id: 'stone', from: 11, name: 'Pierres', text: 'Les <b>pierres</b> ne bougent jamais. Elles bloquent les flèches pour toute la partie.' },
+  { id: 'ice', from: 16, name: 'Glace', text: 'Une tuile <b>gelée</b> doit être touchée pour briser la glace, puis touchée à nouveau pour sortir.' }
+];
+const WORLDS = ['Classique', 'Rayures', 'Perles', 'Bulles', 'Damier'];
+function world(L){ const i = Math.floor((L - 1) / 10); return { i, name: WORLDS[i % WORLDS.length], skin: i % WORLDS.length }; }
+function levelType(L){ return L > 2 && L % 5 === 0 ? 'hard' : 'normal'; }
+function mechsAt(L){ return MECHS.filter(m => L >= m.from).map(m => m.id); }
+function levelParams(L){
+  const n = L <= 2 ? 4 : L <= 5 ? 5 : L <= 10 ? 6 : L <= 20 ? 7 : 8;
+  const density = Math.min(.95, (L <= 2 ? .5 : .75) + .01 * L);
+  return { n, density };
+}
+// Génération à rebours : chaque tuile ajoutée a une voie libre vers le bord au moment de l'ajout.
+// L'ordre inverse d'ajout est donc une solution garantie. Les pierres sont posées d'abord et
+// bloquent pour toujours ; une clé est toujours ajoutée APRÈS sa tuile à cadenas, donc sortie avant elle.
+function generate(L, seed){
+  const { n, density } = levelParams(L), mech = mechsAt(L);
+  const R = rng(seed !== undefined ? seed : L * 9973 + 17);
+  const occ = Array.from({ length: n }, () => Array(n).fill(null));
+  const tiles = [], arrows = [];
+  if (mech.includes('stone')){
+    const k = 1 + Math.floor(n * n * .05) + (L >= 30 ? 1 : 0);
+    for (let tries = 0, placed = 0; placed < k && tries < 200; tries++){
+      const r = 1 + Math.floor(R() * (n - 2)), c = 1 + Math.floor(R() * (n - 2));
+      if (occ[r][c]) continue;
+      const t = { id: tiles.length, r, c, stone: true }; occ[r][c] = t; tiles.push(t); placed++;
+    }
+  }
+  const target = Math.round((n * n - tiles.length) * density);
+  const keys = Object.keys(DIRS);
+  for (let tries = 0; tries < 8000 && arrows.length < target; tries++){
+    const r = Math.floor(R() * n), c = Math.floor(R() * n);
+    if (occ[r][c]) continue;
+    const opts = keys.filter(k => rayClear(occ, n, r, c, k));
+    if (!opts.length) continue;
+    const bias = L <= 2 ? 0 : Math.min(6, 2 + L / 4);
+    const weights = opts.map(k => Math.pow(rayLen(n, r, c, k) + .5, bias));
+    let x = R() * weights.reduce((a, b) => a + b, 0), k = opts[opts.length - 1];
+    for (let i = 0; i < opts.length; i++){ x -= weights[i]; if (x <= 0){ k = opts[i]; break; } }
+    const t = { id: tiles.length, r, c, dir: k, ice: 0, lock: null, key: null }; occ[r][c] = t; tiles.push(t); arrows.push(t);
+  }
+  if (mech.includes('lock') && arrows.length > 6){
+    const pairs = Math.min(4, 1 + Math.floor((L - 6) / 6));
+    for (let p = 0; p < pairs; p++){
+      for (let tries = 0; tries < 50; tries++){
+        const ti = Math.floor(R() * arrows.length * .5), ki = ti + 1 + Math.floor(R() * (arrows.length - ti - 1));
+        const T = arrows[ti], K = arrows[ki];
+        if (!K || T.lock !== null || T.key !== null || K.lock !== null || K.key !== null) continue;
+        T.lock = K.id; K.key = p; T.sym = p; break;
+      }
+    }
+  }
+  if (mech.includes('ice')){
+    const k = Math.min(Math.floor(arrows.length / 3), 2 + Math.floor((L - 16) / 3));
+    for (let i = 0, tries = 0; i < k && tries < 100; tries++){ const t = arrows[Math.floor(R() * arrows.length)]; if (t.ice) continue; t.ice = L >= 30 && R() < .4 ? 2 : 1; i++; }
+  }
+  return { n, tiles };
+}
+function rayClear(occ, n, r, c, k){
+  const [dr, dc] = DIRS[k]; let rr = r + dr, cc = c + dc;
+  while (rr >= 0 && rr < n && cc >= 0 && cc < n){ if (occ[rr][cc]) return false; rr += dr; cc += dc; }
+  return true;
+}
+function rayLen(n, r, c, k){ return k === 'u' ? r : k === 'd' ? n - 1 - r : k === 'l' ? c : n - 1 - c; }
+function firstBlock(occ, n, t){
+  const [dr, dc] = DIRS[t.dir]; let rr = t.r + dr, cc = t.c + dc, d = 1;
+  while (rr >= 0 && rr < n && cc >= 0 && cc < n){ if (occ[rr][cc]) return { d, tile: occ[rr][cc] }; rr += dr; cc += dc; d++; }
+  return null;
+}
+function timeFor(L, tiles){
+  const arrows = tiles.filter(t => !t.stone), f = Math.max(.5, 1 - L * .015);
+  return Math.round(4 + arrows.length * f + arrows.reduce((a, t) => a + t.ice * .6 + (t.lock !== null ? 1.2 : 0), 0));
+}
+
+/* ---------- Motifs (image cachée) ---------- */
+const PALETTES = [
+  ['#f2c14e','#f78154','#4d9078','#b4436c','#1b1b3a'], ['#e63946','#f1faee','#a8dadc','#457b9d','#1d3557'],
+  ['#ffbe0b','#fb5607','#ff006e','#8338ec','#3a86ff'], ['#264653','#2a9d8f','#e9c46a','#f4a261','#e76f51'],
+  ['#0b132b','#1c2541','#3a506b','#5bc0be','#f2e8cf'], ['#5f0f40','#9a031e','#fb8b24','#e36414','#0f4c5c'],
+  ['#006d77','#83c5be','#edf6f9','#ffddd2','#e29578'], ['#3d348b','#7678ed','#f7b801','#f18701','#f35b04']
+];
+const KINDS = ['Bandes', 'Losanges', 'Soleil', 'Mosaïque'];
+function motifName(L){ return `${KINDS[(L - 1) % 4]} n° ${L}`; }
+function drawMotif(ctx, S, L){
+  const R = rng(L * 7919 + 3), P = PALETTES[Math.floor(R() * PALETTES.length)], pick = () => P[Math.floor(R() * P.length)];
+  const kind = (L - 1) % 4;
+  ctx.save(); ctx.fillStyle = P[4]; ctx.fillRect(0, 0, S, S);
+  if (kind === 0){
+    let y = 0;
+    while (y < S){
+      const h = S * (.06 + R() * .12), a = pick(), b = pick(), w = S / (6 + Math.floor(R() * 6));
+      for (let x = 0, i = 0; x < S; x += w, i++){ ctx.fillStyle = i % 2 ? a : b; ctx.fillRect(x, y, w + 1, h + 1); }
+      if (R() > .5){ ctx.fillStyle = pick(); for (let x = w / 4; x < S; x += w){ ctx.fillRect(x, y + h * .35, w / 2, h * .3); } }
+      y += h;
+    }
+  } else if (kind === 1){
+    const k = 10 + Math.floor(R() * 8), cs = S / k, cx = (k - 1) / 2, step = 1 + Math.floor(R() * 2);
+    for (let i = 0; i < k; i++) for (let j = 0; j < k; j++){ const d = Math.floor((Math.abs(i - cx) + Math.abs(j - cx)) / step); ctx.fillStyle = P[d % P.length]; ctx.fillRect(j * cs, i * cs, cs + 1, cs + 1); }
+  } else if (kind === 2){
+    const c = S / 2, rays = 12 + Math.floor(R() * 12);
+    for (let i = 0; i < rays; i++){ ctx.fillStyle = P[i % 4]; ctx.beginPath(); ctx.moveTo(c, c); const a0 = i / rays * Math.PI * 2, a1 = (i + 1) / rays * Math.PI * 2; ctx.lineTo(c + Math.cos(a0) * S, c + Math.sin(a0) * S); ctx.lineTo(c + Math.cos(a1) * S, c + Math.sin(a1) * S); ctx.fill(); }
+    for (let r = S * .38, i = 0; r > 4; r -= S * (.05 + R() * .04), i++){ ctx.fillStyle = P[(i + 2) % P.length]; ctx.beginPath(); ctx.arc(c, c, r, 0, Math.PI * 2); ctx.fill(); }
+  } else {
+    const k = 6 + Math.floor(R() * 5), cs = S / k;
+    for (let i = 0; i < k; i++) for (let j = 0; j < k; j++){
+      const x = j * cs, y = i * cs; ctx.fillStyle = pick(); ctx.fillRect(x, y, cs + 1, cs + 1); ctx.fillStyle = pick(); ctx.beginPath();
+      if ((i + j + Math.floor(R() * 2)) % 2){ ctx.moveTo(x, y); ctx.lineTo(x + cs, y); ctx.lineTo(x, y + cs); } else { ctx.moveTo(x + cs, y); ctx.lineTo(x + cs, y + cs); ctx.lineTo(x, y + cs); }
+      ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
+/* ---------- État ---------- */
+const $ = id => document.getElementById(id);
+const board = $('board'), tilesEl = $('tiles'), motif = $('motif');
+let G = null;
+const ARROW = '<svg class="arrow" viewBox="0 0 24 24"><path d="M12 3l7 8h-4.5v10h-5V11H5z" fill="#fff"/></svg>';
+function show(id){ document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id)); if (id === 'home') renderHome(); }
+function overlay(id, on){ $(id).classList.toggle('on', on); }
+function anyOverlay(){ return !!document.querySelector('.overlay.on'); }
+
+function startLevel(L){
+  save.level = L; persist();
+  const lv = generate(L), type = levelType(L);
+  G = { L, type, n: lv.n, tiles: lv.tiles, byId: {}, hearts: type === 'hard' ? 2 : 3, maxHearts: type === 'hard' ? 2 : 3,
+    occ: Array.from({ length: lv.n }, () => Array(lv.n).fill(null)), start: performance.now(), over: false, revived: false, failed: false,
+    shield: false, frozen: 0, used: false };
+  lv.tiles.forEach(t => { G.occ[t.r][t.c] = t; G.byId[t.id] = t; });
+  G.timeTotal = timeFor(L, lv.tiles); G.timeLeft = G.timeTotal;
+  let msg = '';
+  if (save.streak >= 5){ G.timeLeft += 5; G.timeTotal += 5; }
+  if (save.streak >= 3){ G.shield = true; msg = `Série de ${save.streak} : bouclier offert${save.streak >= 5 ? ' et +5 s' : ''} !`; }
+  save.stats.attempts++; persist();
+  show('game'); layout(); renderTiles(); updateHUD();
+  $('veil').style.opacity = 1;
+  $('hintText').textContent = msg || (L === 1 ? 'Touchez une flèche : elle sort si la voie est libre.' : L === 2 ? 'Attention : une flèche bloquée coûte une vie.' : type === 'hard' ? 'Niveau difficile : 2 vies seulement, pièces doublées.' : '');
+  const tag = $('levelTag'); tag.className = 'tag' + (type === 'hard' ? ' hard' : ''); tag.textContent = type === 'hard' ? 'Difficile' : 'Normal';
+  // Présentation des nouvelles mécaniques
+  const fresh = MECHS.filter(m => mechsAt(L).includes(m.id) && !save.seen.includes(m.id));
+  if (fresh.length){
+    $('mechList').innerHTML = fresh.map(m => `<div class="mech"><div class="demo">${demoTile(m.id)}</div><p><b>${m.name}</b><br>${m.text}</p></div>`).join('');
+    fresh.forEach(m => save.seen.push(m.id)); persist();
+    overlay('mechOv', true);
+  }
+}
+function demoTile(id){
+  if (id === 'stone') return '<div class="tile stone"></div>';
+  if (id === 'ice') return `<div class="tile d ice">${ARROW.replace('class="arrow"', 'class="arrow" style="transform:rotate(180deg)"')}</div>`;
+  return `<div class="tile r locked">${ARROW.replace('class="arrow"', 'class="arrow" style="transform:rotate(90deg)"')}<span class="badge" style="background:${SYMS[0].c}">🔒</span></div>`;
+}
+
+let cell = 0, size = 0;
+function layout(){
+  if (!G) return;
+  const w = Math.min(window.innerWidth - 24, 520), h = window.innerHeight - 300;
+  size = Math.max(220, Math.floor(Math.min(w, h)));
+  board.style.width = board.style.height = size + 'px';
+  cell = size / G.n;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  motif.width = motif.height = Math.round(size * dpr);
+  const ctx = motif.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); drawMotif(ctx, size, G.L);
+  G.tiles.forEach(t => { if (t.el) place(t); });
+}
+function place(t){
+  const pad = Math.max(4, cell * .08);
+  Object.assign(t.el.style, { left: (t.c * cell + pad) + 'px', top: (t.r * cell + pad) + 'px', width: (cell - pad * 2) + 'px', height: (cell - pad * 2) + 'px' });
+}
+function isLocked(t){ return t.lock !== null && t.lock !== undefined && !G.byId[t.lock].gone; }
+function decorate(t){
+  const el = t.el, sk = world(G.L).skin;
+  if (t.stone){ el.className = 'tile stone'; el.innerHTML = ''; return; }
+  el.className = `tile ${t.dir}${sk ? ' skin' + sk : ''}${t.ice ? ' ice' + (t.ice > 1 ? ' ice2' : '') : ''}${isLocked(t) ? ' locked' : ''}`;
+  let html = ARROW.replace('class="arrow"', `class="arrow" style="transform:rotate(${ROT[t.dir]}deg)"`);
+  if (isLocked(t)) html += `<span class="badge" style="background:${SYMS[t.sym].c}">🔒</span>`;
+  if (t.key !== null && t.key !== undefined) html += `<span class="badge" style="background:${SYMS[t.key].c}">🔑</span>`;
+  el.innerHTML = html;
+}
+function renderTiles(){
+  tilesEl.innerHTML = '';
+  G.tiles.forEach(t => {
+    const el = document.createElement('div'); t.el = el; decorate(t);
+    el.addEventListener('pointerdown', e => { e.preventDefault(); tap(t); });
+    tilesEl.appendChild(el); place(t);
+  });
+}
+function remaining(){ return G.tiles.filter(t => !t.stone && !t.gone).length; }
+
+/* ---------- Chrono ---------- */
+let lastTick = 0;
+setInterval(() => {
+  if (!G || G.over || anyOverlay() || !$('game').classList.contains('on')) return;
+  if (G.frozen > 0){ G.frozen = Math.max(0, G.frozen - .1); renderTimer(); return; }
+  G.timeLeft = Math.max(0, G.timeLeft - .1); renderTimer();
+  if (G.timeLeft <= 5 && Math.ceil(G.timeLeft) !== lastTick){ lastTick = Math.ceil(G.timeLeft); if (G.timeLeft > 0) sfx.tick(); }
+  if (G.timeLeft <= 0){ save.stats.timeouts++; fail('time'); }
+}, 100);
+function renderTimer(){
+  if (!G) return;
+  const low = G.timeLeft <= 5 && !G.frozen, fz = G.frozen > 0;
+  $('timefill').style.width = Math.max(0, Math.min(100, G.timeLeft / G.timeTotal * 100)) + '%';
+  $('timebar').className = 'timebar' + (low ? ' low' : '') + (fz ? ' frozen' : '');
+  $('timer').textContent = fz ? `❄ ${Math.ceil(G.frozen)} s` : `${Math.ceil(G.timeLeft)} s`;
+  $('timer').className = low ? 'low' : fz ? 'frozen' : '';
+}
+
+function updateHUD(){
+  $('lvlLabel').textContent = 'Niveau ' + G.L;
+  const w = world(G.L); $('worldLabel').textContent = `Monde ${w.i + 1} · ${w.name}`;
+  $('hearts').innerHTML = '❤'.repeat(G.hearts) + '<span style="opacity:.25">' + '❤'.repeat(Math.max(0, G.maxHearts - G.hearts)) + '</span>' + (G.shield ? '<span class="sh">🛡️</span>' : '');
+  board.classList.toggle('shielded', G.shield);
+  $('coins').textContent = '● ' + save.coins;
+  $('soundBtn').textContent = save.sound ? '🔊' : '🔇';
+  $('streakLabel').textContent = save.streak >= 2 ? `🔥 ${save.streak}` : '';
+  const price = { freeze: 40, shield: 40, bolt: 60 };
+  [['freeze', 'cFreeze'], ['shield', 'cShield'], ['bolt', 'cBolt']].forEach(([k, id]) => {
+    const n = save.inv[k], el = $(id); el.textContent = n > 0 ? n : price[k] + '●'; el.className = 'ct' + (n > 0 ? '' : ' buy');
+  });
+  $('bShield').classList.toggle('active', G.shield);
+  if (G.mode === 'daily') dcHud();
+  renderTimer();
+}
+
+/* ---------- Coups ---------- */
+function exitTile(t){
+  const [dr, dc] = DIRS[t.dir];
+  t.gone = true; G.occ[t.r][t.c] = null;
+  if (G.mode === 'daily'){ G.score += 100; dcHud(); }
+  const dist = (G.n + 1) * cell;
+  t.el.style.transform = `translate(${dc * dist}px, ${dr * dist}px)`; t.el.style.opacity = '0';
+  sfx.out();
+  setTimeout(() => t.el.remove(), 300);
+  if (t.key !== null && t.key !== undefined){
+    G.tiles.forEach(o => { if (o.lock === t.id && !o.gone){ decorate(o); o.el.classList.add('unlocking'); setTimeout(() => o.el.classList.remove('unlocking'), 400); } });
+    sfx.unlock();
+  }
+  if (!remaining()) win();
+}
+function nope(t, msg){ t.el.classList.remove('nope'); void t.el.offsetWidth; t.el.classList.add('nope'); sfx.nope(); if (msg) $('hintText').textContent = msg; }
+function tap(t){
+  if (!G || G.over || t.gone || t.moving) return;
+  clearHint();
+  if (t.stone) return nope(t, 'Les pierres ne bougent jamais.');
+  if (t.ice > 0){
+    t.ice--; sfx.crack(); buzz(15); decorate(t);
+    if (t.ice > 0) t.el.classList.add('cracked');
+    return;
+  }
+  if (isLocked(t)) return nope(t, `Cadenas : faites d'abord sortir la clé de la même couleur (${SYMS[t.sym].n}).`);
+  const [dr, dc] = DIRS[t.dir];
+  const block = firstBlock(G.occ, G.n, t);
+  if (!block) return exitTile(t);
+  t.moving = true;
+  const go = (block.d - 1) * cell + cell * .22;
+  t.el.style.transform = `translate(${dc * go}px, ${dr * go}px)`;
+  setTimeout(() => {
+    t.el.style.transform = ''; block.tile.el.classList.add('hit'); board.classList.add('shake');
+    setTimeout(() => { block.tile.el.classList.remove('hit'); board.classList.remove('shake'); t.moving = false; }, 300);
+    if (G.over) return;
+    if (G.shield){ G.shield = false; save.stats.shieldSaves++; sfx.shield(); $('hintText').textContent = 'Le bouclier a absorbé le choc !'; persist(); updateHUD(); return; }
+    sfx.bump(); buzz(60);
+    G.hearts--; save.stats.bumps++; persist(); updateHUD();
+    if (G.hearts <= 0) fail('lives');
+  }, 170 + (block.d - 1) * 40);
+}
+
+/* ---------- Boosters ---------- */
+const PRICE = { freeze: 40, shield: 40, bolt: 60 };
+function useBooster(k){
+  if (!G || G.over) return;
+  if (k === 'shield' && G.shield) return;
+  const apply = () => {
+    save.stats[k]++; G.used = true;
+    if (k === 'freeze'){ G.frozen += 10; sfx.freeze(); $('hintText').textContent = 'Chrono gelé 10 secondes.'; }
+    if (k === 'shield'){ G.shield = true; sfx.shield(); $('hintText').textContent = 'Bouclier actif : le prochain choc est gratuit.'; }
+    if (k === 'bolt'){
+      const pick = () => G.tiles.find(t => !t.stone && !t.gone && !t.moving && !isLocked(t) && !firstBlock(G.occ, G.n, t));
+      let n = 0;
+      const step = () => { if (G.over || n >= 3) return; const t = pick(); if (!t) return; t.ice = 0; decorate(t); exitTile(t); n++; setTimeout(step, 140); };
+      step(); $('hintText').textContent = 'Éclair : 3 tuiles libérées.';
+    }
+    persist(); updateHUD();
+  };
+  if (G.mode === 'daily'){
+    if (k === 'bolt'){ $('hintText').textContent = 'Éclair désactivé pendant le Défi du jour.'; return; }
+    if (!G.kit[k]){ $('hintText').textContent = 'Ce booster du kit est déjà utilisé.'; return; }
+    G.kit[k]--; apply(); return;
+  }
+  if (save.inv[k] > 0){ save.inv[k]--; apply(); return; }
+  if (save.coins >= PRICE[k]){ save.coins -= PRICE[k]; save.stats.boostersBought++; apply(); return; }
+  watchAd(apply);
+}
+
+function hint(){
+  if (G && G.mode === 'daily'){ $('hintText').textContent = 'Pas d’indice pendant le Défi du jour.'; return; }
+  if (!G || G.over) return;
+  const t = G.tiles.find(t => !t.stone && !t.gone && !t.moving && !isLocked(t) && (t.ice > 0 || !firstBlock(G.occ, G.n, t)));
+  if (!t) return;
+  const go = () => { t.el.classList.add('hinted'); save.stats.hints++; persist(); sfx.click(); };
+  if (save.coins >= 30){ save.coins -= 30; updateHUD(); go(); } else watchAd(go);
+}
+function clearHint(){ tilesEl.querySelectorAll('.hinted').forEach(e => e.classList.remove('hinted')); }
+
+/* ---------- Fin de niveau ---------- */
+const BOOST_NAMES = { freeze: '❄️ Gel', shield: '🛡️ Bouclier', bolt: '⚡ Éclair' };
+function win(){
+  if (G.mode === 'daily') return dcStageClear();
+  G.over = true;
+  save.stats.wins++; save.stats.playMs += performance.now() - G.start;
+  const stars = Math.max(1, 3 - (G.maxHearts - G.hearts) - (G.revived ? 1 : 0));
+  const base = (10 + stars * 5) * (G.type === 'hard' ? 2 : 1), timeBonus = Math.floor(G.timeLeft / 2);
+  if (!G.failed) save.streak++;
+  save.stats.bestStreak = Math.max(save.stats.bestStreak, save.streak);
+  const streakBonus = save.streak >= 3 ? 5 * Math.min(save.streak, 10) : 0;
+  const gain = base + timeBonus + streakBonus;
+  save.coins += gain; G.gain = gain;
+  save.starPool += stars;
+  let reward = '';
+  if (save.starPool >= 20){
+    save.starPool -= 20; save.stats.chests++;
+    const R = rng(Date.now() & 0xffff), ks = ['freeze', 'shield', 'bolt'], a = ks[Math.floor(R() * 3)], b = ks[Math.floor(R() * 3)];
+    save.inv[a]++; save.inv[b]++; save.coins += 50;
+    reward = `Coffre d'étoiles ouvert : ${BOOST_NAMES[a]} + ${BOOST_NAMES[b]} + 50 pièces`;
+  }
+  if (G.L >= save.maxLevel) save.maxLevel = G.L + 1;
+  persist(); updateHUD();
+  $('veil').style.opacity = 0; sfx.win(); buzz([30, 40, 30]);
+  setTimeout(() => {
+    $('winTitle').textContent = stars === 3 ? 'Parfait !' : 'Bravo !';
+    $('winStars').innerHTML = [0, 1, 2].map(i => i < stars ? '★' : '<span class="off">★</span>').join('');
+    drawMotif($('winThumb').getContext('2d'), 240, G.L);
+    $('winName').textContent = `« ${motifName(G.L)} » ajouté à votre album`;
+    $('winGains').innerHTML = `<div>Victoire${G.type === 'hard' ? ' (difficile ×2)' : ''}</div><div>+${base}</div><div>Temps restant (${Math.floor(G.timeLeft)} s)</div><div>+${timeBonus}</div>` +
+      (streakBonus ? `<div>Série de ${save.streak} victoires 🔥</div><div>+${streakBonus}</div>` : '') +
+      `<div class="tot">Total · solde ${save.coins}</div><div class="tot">+${gain} ●</div>`;
+    $('chestTxt').textContent = `${save.starPool}/20 ★`; $('chestFill').style.width = (save.starPool / 20 * 100) + '%';
+    $('winReward').style.display = reward ? '' : 'none'; $('winReward').textContent = reward;
+    $('doubleBtn').textContent = `Regarder une pub (simulée) : +${gain} ● de plus`;
+    $('doubleBtn').style.display = '';
+    overlay('winOv', true);
+  }, 800);
+}
+function fail(reason){
+  if (G.over) return;
+  if (G.mode === 'daily'){ G.over = true; setTimeout(() => dcRecord(false, reason), 400); return; }
+  G.over = true; G.failReason = reason; G.failed = true;
+  save.stats.fails++; save.stats.playMs += performance.now() - G.start;
+  const lost = save.streak; save.streak = 0; persist();
+  const time = reason === 'time';
+  $('failTitle').textContent = time ? 'Temps écoulé' : 'Plus de vies';
+  $('failText').textContent = time ? `Il restait ${remaining()} tuile${remaining() > 1 ? 's' : ''}.` : 'Une flèche a heurté un obstacle de trop.';
+  $('failStreak').textContent = lost >= 2 ? `Série de ${lost} victoires perdue.` : '';
+  $('reviveBtn').textContent = time ? '+10 secondes (pub simulée)' : '+1 vie (pub simulée)';
+  $('buyBtn').textContent = (time ? '+10 secondes' : '+1 vie') + ` : 40 ● (solde ${save.coins})`;
+  $('reviveBtn').style.display = G.revived ? 'none' : ''; $('buyBtn').style.display = G.revived ? 'none' : '';
+  $('buyBtn').disabled = save.coins < 40;
+  setTimeout(() => overlay('failOv', true), 400);
+}
+function revive(){
+  if (G.failReason === 'time'){ G.timeLeft += 10; G.timeTotal = Math.max(G.timeTotal, G.timeLeft); } else G.hearts = 1;
+  G.over = false; G.revived = true; G.start = performance.now(); updateHUD();
+}
+function watchAd(done){
+  overlay('adOv', true); let n = 3; $('adCount').textContent = n;
+  const iv = setInterval(() => { n--; $('adCount').textContent = n; if (n <= 0){ clearInterval(iv); overlay('adOv', false); save.stats.ads++; persist(); done(); } }, 1000);
+}
+
+/* ---------- Récompense du jour ---------- */
+const DAILY = [
+  { t: '50 ●', give: () => { save.coins += 50; } }, { t: '❄️ ×1', give: () => { save.inv.freeze++; } },
+  { t: '80 ●', give: () => { save.coins += 80; } }, { t: '🛡️ ×1', give: () => { save.inv.shield++; } },
+  { t: '120 ●', give: () => { save.coins += 120; } }, { t: '⚡ ×1', give: () => { save.inv.bolt++; } },
+  { t: '🎁', give: () => { save.coins += 200; save.inv.freeze += 2; save.inv.shield += 2; save.inv.bolt += 2; } }
+];
+function dailyState(){
+  const d = save.daily;
+  if (d.last === today()) return { claimed: true, day: d.day };
+  const next = d.last === today(-1) ? (d.day % 7) + 1 : 1;
+  return { claimed: false, day: next };
+}
+function openDaily(){
+  const st = dailyState();
+  $('days').innerHTML = DAILY.map((r, i) => `<div class="day${i + 1 < st.day || (st.claimed && i + 1 === st.day) ? ' done' : ''}${!st.claimed && i + 1 === st.day ? ' today' : ''}"><span>J${i + 1}</span><b>${r.t.split(' ')[0]}</b><span>${r.t.split(' ')[1] || 'coffre'}</span></div>`).join('');
+  $('dailyReward').textContent = st.claimed ? 'Déjà récupérée aujourd\'hui. Revenez demain !' : `Jour ${st.day} : ${st.day === 7 ? 'gros coffre (200 ● + 2 de chaque booster)' : DAILY[st.day - 1].t}`;
+  $('dailyText').textContent = st.day === 1 && !st.claimed && save.daily.last ? 'Série interrompue : on repart du jour 1. Revenez chaque jour pour le gros coffre du 7e jour.' : 'Revenez chaque jour : le 7e jour, un gros coffre.';
+  $('claimBtn').textContent = st.claimed ? 'Fermer' : 'Récupérer';
+  overlay('dailyOv', true);
+}
+$('claimBtn').onclick = () => {
+  const st = dailyState();
+  if (!st.claimed){ DAILY[st.day - 1].give(); save.daily = { last: today(), day: st.day }; save.stats.daily++; persist(); sfx.win(); }
+  overlay('dailyOv', false); renderHome();
+};
+
+/* ---------- Accueil, album, stats ---------- */
+function renderHome(){
+  const st = dailyState();
+  $('homeStats').innerHTML = `<span class="pill">Niveau ${save.maxLevel}</span><span class="pill">● ${save.coins}</span>${save.streak >= 2 ? `<span class="pill">🔥 ${save.streak}</span>` : ''}`;
+  dcHomeLabel();
+  $('dailyBtn').textContent = st.claimed ? '🎁 Récompense du jour (récupérée)' : `🎁 Récompense du jour : J${st.day} à récupérer`;
+}
+function openAlbum(){
+  const grid = $('albumGrid'); grid.innerHTML = '';
+  const owned = save.maxLevel - 1, total = Math.max(24, Math.ceil((owned + 6) / 6) * 6);
+  $('albumCount').textContent = owned + ' motifs';
+  for (let L = 1; L <= total; L++){
+    const d = document.createElement('div'); d.className = 'cell';
+    if (L <= owned){ const c = document.createElement('canvas'); c.width = c.height = 160; drawMotif(c.getContext('2d'), 160, L); d.appendChild(c); const s = document.createElement('span'); s.textContent = motifName(L); d.appendChild(s); }
+    else d.innerHTML = '<b>?</b>';
+    grid.appendChild(d);
+  }
+  show('album');
+}
+function statRows(){
+  const s = save.stats;
+  return [['Version', VERSION], ['Niveau atteint', save.maxLevel], ['Niveaux réussis', s.wins], ['Parties lancées', s.attempts], ['Échecs', s.fails],
+    ['dont chrono écoulé', s.timeouts], ['Recommencements', s.restarts], ['Chocs (vies perdues)', s.bumps], ['Chocs absorbés par bouclier', s.shieldSaves],
+    ['Boosters gel / bouclier / éclair', `${s.freeze} / ${s.shield} / ${s.bolt}`], ['Boosters achetés', s.boostersBought], ['Indices', s.hints],
+    ['Vies ou temps achetés', s.lives], ['Pubs simulées vues', s.ads], ['Récompenses du jour', s.daily], ['Coffres ouverts', s.chests],
+    ['Meilleure série', s.bestStreak], ['Défis joués / terminés', `${s.dcPlays} / ${s.dcDone}`], ['Meilleur score Défi du jour', (dcToday() || {}).score ?? '—'], ['Temps de jeu', Math.round(s.playMs / 60000) + ' min'], ['Sessions', s.sessions],
+    ['Jours différents joués', s.days.length], ['Jours depuis 1re partie', Math.floor((Date.now() - s.firstSeen) / 864e5)]];
+}
+function openStats(){ $('statList').innerHTML = statRows().map(([k, v]) => `<div>${k}</div><div><b>${v}</b></div>`).join(''); overlay('statsOv', true); }
+function copyStats(){
+  const txt = 'Déclic – stats testeur\n' + statRows().map(([k, v]) => `${k} : ${v}`).join('\n');
+  const ok = () => { $('copyStats').textContent = 'Copié !'; setTimeout(() => $('copyStats').textContent = 'Copier mes stats', 1500); };
+  const fallback = () => { const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); ok(); } catch(e){} ta.remove(); };
+  try { navigator.clipboard.writeText(txt).then(ok, fallback); } catch(e){ fallback(); }
+}
+
+/* ---------- Défi du jour (v4) ---------- */
+const DC_LEVELS = [7, 12, 17], DC_UNLOCK = 7, DC_SALT = 'declic-v4', NL = String.fromCharCode(10);
+const DC_RE = 'Défi ([0-9]{4}-[0-9]{2}-[0-9]{2}) · (.+?) · ([0-9]+) pts · ([0-3])/3 · code ([0-9A-Z]{6})';
+function hstr(s){ let h = 2166136261; for (let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+function dcDate(){ return new Date().toISOString().slice(0, 10); }
+function dcState(){
+  const d = dcDate();
+  if (!save.dc || save.dc.date !== d){ save.dc = { date: d, tries: 0, adTry: false, hist: (save.dc && save.dc.hist) || [] }; persist(); }
+  return save.dc;
+}
+function dcToday(){ return ((save.dc && save.dc.hist) || []).find(e => e.date === dcDate()); }
+function dcMaxTries(){ return 1 + (save.dc.adTry ? 1 : 0); }
+function dcUnlocked(){ return save.maxLevel >= DC_UNLOCK; }
+function cleanPseudo(s){ return String(s || '').replace(/[|·<>]/g, ' ').replace(/ +/g, ' ').trim().slice(0, 16); }
+function dcCode(date, p, score, grids){ return hstr(`${date}|${p.toLowerCase()}|${score}|${grids}|${DC_SALT}`).toString(36).toUpperCase().padStart(6, '0').slice(-6); }
+function dcLine(e){ const p = cleanPseudo(save.pseudo) || 'Anonyme'; return `Déclic · Défi ${e.date} · ${p} · ${e.score} pts · ${e.grids}/3 · code ${dcCode(e.date, p, e.score, e.grids)}`; }
+function copyText(txt, btn, label){
+  const ok = () => { btn.textContent = 'Copié !'; setTimeout(() => btn.textContent = label, 1500); };
+  const fallback = () => { const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); ok(); } catch(e){} ta.remove(); };
+  try { navigator.clipboard.writeText(txt).then(ok, fallback); } catch(e){ fallback(); }
+}
+function dcHomeLabel(){
+  const st = dcState(), b = $('dcBtn'); if (!b) return;
+  if (!dcUnlocked()){ b.textContent = `🏆 Défi du jour (après le niveau ${DC_UNLOCK - 1})`; return; }
+  const t = dcToday(), left = dcMaxTries() - st.tries;
+  b.textContent = `🏆 Défi du jour · ${t ? t.score + ' pts' : 'à jouer'}${left > 0 && t ? ' · essai dispo' : ''}`;
+}
+function dcHud(){
+  if (!G || G.mode !== 'daily') return;
+  $('lvlLabel').textContent = `Défi du jour · ${G.stage + 1}/3`;
+  $('worldLabel').textContent = `Score ${G.score}`;
+  const tag = $('levelTag'); tag.className = 'tag'; tag.textContent = 'Défi';
+  $('cFreeze').textContent = G.kit.freeze; $('cFreeze').className = 'ct';
+  $('cShield').textContent = G.kit.shield; $('cShield').className = 'ct';
+  $('cBolt').textContent = '✕'; $('cBolt').className = 'ct buy';
+  $('streakLabel').textContent = '';
+}
+function openDc(){
+  const st = dcState(), t = dcToday(), left = dcMaxTries() - st.tries, un = dcUnlocked();
+  $('dcDate').textContent = `Défi du ${st.date} · même grille pour tout le monde · nouvelle grille à minuit (GMT)`;
+  $('dcBest').textContent = !un ? `Débloqué après le niveau ${DC_UNLOCK - 1}. Vous êtes au niveau ${save.maxLevel}.` : t ? `Votre meilleur score du jour : ${t.score} pts (${t.grids}/3 grilles)` : 'Pas encore de score aujourd’hui.';
+  $('dcPseudo').value = save.pseudo || '';
+  $('dcPlay').textContent = !un ? 'Verrouillé' : left > 0 ? `Jouer (essai ${st.tries + 1}/${dcMaxTries()})` : 'Essais du jour utilisés';
+  $('dcPlay').disabled = !un || left <= 0;
+  $('dcAd').style.display = un && !st.adTry && left <= 0 ? '' : 'none';
+  $('dcShare').style.display = t ? '' : 'none';
+  const box = $('dcHist'), h = (st.hist || []).slice(-7).reverse(); box.innerHTML = '';
+  if (h.length){ const p = document.createElement('p'); p.className = 'small'; p.textContent = 'Vos derniers défis'; box.appendChild(p); }
+  h.forEach(e => { const d = document.createElement('div'), a = document.createElement('span'), b = document.createElement('b'); a.textContent = e.date; b.textContent = `${e.score} pts · ${e.grids}/3`; d.append(a, b); box.appendChild(d); });
+  lbMsg($('dcLb'), 'Chargement du classement…');
+  const day = st.date; lbFetch(day).then(rows => lbRender($('dcLb'), rows, day));
+  overlay('dcOv', true);
+}
+function startDaily(){
+  const st = dcState();
+  if (!dcUnlocked() || st.tries >= dcMaxTries()) return;
+  st.tries++; save.stats.dcPlays++; persist();
+  const grids = DC_LEVELS.map((L, i) => generate(L, hstr(`${st.date}#${i}`)));
+  const total = grids.reduce((a, g, i) => a + timeFor(DC_LEVELS[i], g.tiles), 0);
+  G = { mode: 'daily', date: st.date, grids, stage: -1, score: 0, kit: { freeze: 1, shield: 1 }, hearts: 3, maxHearts: 3, timeTotal: total, timeLeft: total,
+    type: 'normal', over: false, revived: true, failed: false, shield: false, frozen: 0, used: false, start: performance.now() };
+  overlay('dcOv', false); show('game'); dcLoadStage(0);
+}
+function dcLoadStage(i){
+  const lv = G.grids[i];
+  Object.assign(G, { stage: i, L: DC_LEVELS[i], n: lv.n, tiles: lv.tiles, byId: {}, occ: Array.from({ length: lv.n }, () => Array(lv.n).fill(null)), over: false });
+  lv.tiles.forEach(t => { G.occ[t.r][t.c] = t; G.byId[t.id] = t; });
+  layout(); renderTiles(); updateHUD();
+  $('veil').style.opacity = 1;
+  $('hintText').textContent = i === 0 ? 'Défi : 3 grilles, un seul chrono, 3 vies. Kit : 1 Gel + 1 Bouclier.' : `Grille ${i + 1}/3 : le chrono continue.`;
+  const fresh = MECHS.filter(m => mechsAt(G.L).includes(m.id) && !save.seen.includes(m.id));
+  if (fresh.length){
+    $('mechList').innerHTML = fresh.map(m => `<div class='mech'><div class='demo'>${demoTile(m.id)}</div><p><b>${m.name}</b><br>${m.text}</p></div>`).join('');
+    fresh.forEach(m => save.seen.push(m.id)); persist(); overlay('mechOv', true);
+  }
+}
+function dcStageClear(){
+  G.over = true; $('veil').style.opacity = 0; sfx.win(); buzz([30, 40, 30]);
+  const g = G;
+  if (g.stage < 2){ $('hintText').textContent = `Grille ${g.stage + 1} terminée !`; setTimeout(() => { if (G === g) dcLoadStage(g.stage + 1); }, 900); }
+  else setTimeout(() => { if (G === g) dcRecord(true); }, 900);
+}
+function dcRecord(done, reason){
+  G.over = true;
+  const grids = done ? 3 : Math.max(0, G.stage), left = Math.ceil(G.timeLeft);
+  const bt = done ? left * 10 : 0, bl = done ? G.hearts * 150 : 0, bk = done ? (G.kit.freeze + G.kit.shield) * 100 : 0;
+  const base = G.score, score = base + bt + bl + bk, reward = done ? 20 : 0;
+  if (done) save.stats.dcDone++;
+  save.coins += reward;
+  dcState();
+  const hist = save.dc.hist || (save.dc.hist = []);
+  let e = hist.find(x => x.date === G.date);
+  if (!e){ e = { date: G.date, score, grids }; hist.push(e); } else if (score > e.score){ e.score = score; e.grids = grids; }
+  while (hist.length > 14) hist.shift();
+  persist();
+  const day = G.date, sent = lbSend({ date: day, score, grids });
+  if (reason === 'abandon') return;
+  $('dcEndTitle').textContent = done ? 'Défi terminé !' : reason === 'time' ? 'Temps écoulé' : 'Plus de vies';
+  $('dcEndGains').innerHTML = `<div>Flèches sorties</div><div>+${base}</div>` + (done ? `<div>Temps restant (${left} s)</div><div>+${bt}</div><div>Vies restantes (${G.hearts})</div><div>+${bl}</div><div>Kit non utilisé</div><div>+${bk}</div>` : `<div>Grilles terminées</div><div>${grids}/3</div>`) + `<div class='tot'>Score</div><div class='tot'>${score}</div>` + (reward ? `<div>Récompense</div><div>+${reward} ●</div>` : '');
+  $('dcEndBest').textContent = `Meilleur score du jour : ${e.score} pts`;
+  $('dcEndLine').textContent = dcLine(e);
+  lbMsg($('dcEndLb'), 'Envoi au classement…');
+  sent.then(ok => {
+    if (!ok){ lbMsg($('dcEndLb'), 'Score non envoyé au classement en ligne (connexion ?). En secours : « Copier mon score ».'); return; }
+    return lbFetch(day).then(rows => {
+      if (!rows){ lbMsg($('dcEndLb'), 'Score enregistré. Classement momentanément indisponible.'); return; }
+      const i = rows.findIndex(r => r.player_id === save.pid);
+      lbMsg($('dcEndLb'), i >= 0 ? `🏆 Classement du jour : ${i + 1}${i ? 'e' : 'er'} sur ${rows.length} joueur${rows.length > 1 ? 's' : ''}` : 'Score enregistré.');
+    });
+  });
+  overlay('dcEndOv', true);
+}
+/* ---------- Classement en ligne (v5, Supabase) ---------- */
+const SB_URL = 'https://qrbntgpdcvtnolfgxsbq.supabase.co', SB_KEY = 'sb_publishable_N2M2wvrSmQrMh3c_juCyXA_hQzY_2tb';
+let sb = null;
+try { if (window.supabase && window.supabase.createClient) sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: false, autoRefreshToken: false } }); } catch(e){ sb = null; }
+function pid(){
+  if (!save.pid){
+    save.pid = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx'.replace(/x/g, () => (Math.random() * 16 | 0).toString(16));
+    persist();
+  }
+  return save.pid;
+}
+async function lbSend(e){
+  if (!sb) return false;
+  try {
+    const { error } = await sb.from('scores').insert({ day: e.date, pseudo: cleanPseudo(save.pseudo) || 'Anonyme', player_id: pid(), score: e.score, grids: e.grids });
+    return !error;
+  } catch(x){ return false; }
+}
+async function lbFetch(day){
+  if (!sb) return null;
+  try {
+    const { data, error } = await sb.from('scores').select('pseudo,player_id,score,grids').eq('day', day).order('score', { ascending: false }).limit(1000);
+    if (error || !data) return null;
+    const best = {}; data.forEach(r => { if (!best[r.player_id]) best[r.player_id] = r; });
+    return Object.values(best);
+  } catch(x){ return null; }
+}
+function lbMsg(box, txt){ box.innerHTML = ''; const p = document.createElement('p'); p.className = 'small'; p.textContent = txt; box.appendChild(p); }
+function lbRow(i, r, mine){
+  const d = document.createElement('div'), a = document.createElement('span'), b = document.createElement('b');
+  a.textContent = `${i + 1}. ${cleanPseudo(r.pseudo) || 'Anonyme'}${mine ? ' (vous)' : ''}`; b.textContent = `${r.score} pts · ${r.grids}/3`;
+  if (mine) d.style.boxShadow = 'inset 0 0 0 2px var(--gold)';
+  d.append(a, b); return d;
+}
+function lbRender(box, rows, day){
+  if (rows === null){ lbMsg(box, 'Classement en ligne indisponible pour le moment. En secours : « Copier mon score ».'); return; }
+  lbMsg(box, rows.length ? `🏆 Classement du ${day} · ${rows.length} joueur${rows.length > 1 ? 's' : ''}` : `🏆 Classement du ${day} : soyez le premier !`);
+  let mine = -1; rows.forEach((r, i) => { if (r.player_id === save.pid) mine = i; });
+  rows.slice(0, 20).forEach((r, i) => box.appendChild(lbRow(i, r, i === mine)));
+  if (mine >= 20) box.appendChild(lbRow(mine, rows[mine], true));
+}
+let groupText = '';
+function groupRank(){
+  const re = new RegExp(DC_RE, 'g'), txt = $('grpIn').value, ok = [], bad = [], out = $('grpOut');
+  let m; out.innerHTML = '';
+  while ((m = re.exec(txt))){ const date = m[1], p = cleanPseudo(m[2]), sc = +m[3], gr = +m[4]; (dcCode(date, p, sc, gr) === m[5] ? ok : bad).push({ date, p, score: sc, grids: gr }); }
+  if (!ok.length){ const d = document.createElement('p'); d.className = 'small'; d.textContent = bad.length ? `${bad.length} score(s) au code invalide, aucun score valide.` : 'Aucune ligne de score reconnue.'; out.appendChild(d); $('grpCopy').style.display = 'none'; return; }
+  const date = ok.map(e => e.date).sort().pop(), best = {};
+  ok.filter(e => e.date === date).forEach(e => { const k = e.p.toLowerCase(); if (!best[k] || e.score > best[k].score) best[k] = e; });
+  const rows = Object.values(best).sort((a, b) => b.score - a.score);
+  const h = document.createElement('p'); h.className = 'small'; h.textContent = `Défi du ${date}${bad.length ? ` · ${bad.length} score(s) rejeté(s) : code invalide` : ''}`; out.appendChild(h);
+  rows.forEach((e, i) => { const d = document.createElement('div'), a = document.createElement('span'), b = document.createElement('b'); a.textContent = `${i + 1}. ${e.p}`; b.textContent = `${e.score} pts · ${e.grids}/3`; d.append(a, b); out.appendChild(d); });
+  groupText = `🏆 Classement Déclic · Défi du ${date}` + NL + rows.map((e, i) => `${i + 1}. ${e.p} · ${e.score} pts (${e.grids}/3)`).join(NL) + (bad.length ? NL + `(${bad.length} score(s) rejeté(s) : code invalide)` : '');
+  $('grpCopy').style.display = '';
+}
+$('dcBtn').onclick = () => { sfx.click(); openDc(); };
+$('dcPseudo').oninput = () => { save.pseudo = cleanPseudo($('dcPseudo').value); persist(); };
+$('dcPlay').onclick = () => { sfx.click(); if (!cleanPseudo(save.pseudo)){ $('dcBest').textContent = 'Choisissez d’abord un pseudo : il apparaîtra dans le classement.'; $('dcPseudo').focus(); return; } startDaily(); };
+$('dcAd').onclick = () => { overlay('dcOv', false); watchAd(() => { save.dc.adTry = true; persist(); startDaily(); }); };
+$('dcShare').onclick = () => { const t = dcToday(); if (t) copyText(dcLine(t), $('dcShare'), 'Copier mon score'); };
+$('dcEndShare').onclick = () => { const t = dcToday() || (save.dc.hist || []).slice(-1)[0]; if (t) copyText(dcLine(t), $('dcEndShare'), 'Copier mon score'); };
+$('dcEndBack').onclick = () => { overlay('dcEndOv', false); G = null; show('home'); openDc(); };
+$('dcGroup').onclick = () => { overlay('dcOv', false); overlay('grpOv', true); };
+$('grpGo').onclick = groupRank;
+$('grpCopy').onclick = () => copyText(groupText, $('grpCopy'), 'Copier le classement');
+
+/* ---------- Branchements ---------- */
+$('logoTiles').innerHTML = ['u', 'r', 'd', 'l'].map((k, i) => `<div class="tile ${k}${i ? ' skin' + i : ''}" style="position:relative;width:40px;height:40px">${ARROW.replace('class="arrow"', `class="arrow" style="transform:rotate(${ROT[k]}deg)"`)}</div>`).join('');
+$('playBtn').onclick = () => { sfx.click(); startLevel(save.maxLevel); };
+$('dailyBtn').onclick = openDaily;
+$('albumBtn').onclick = openAlbum;
+$('helpBtn').onclick = () => overlay('helpOv', true);
+$('statsBtn').onclick = openStats;
+$('copyStats').onclick = copyStats;
+document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => b.closest('.overlay').classList.remove('on'));
+$('albumBack').onclick = () => show('home');
+$('homeBtn').onclick = () => { if (G && G.mode === 'daily'){ if (!G.over) dcRecord(false, 'abandon'); G = null; show('home'); return; } if (G && !G.over){ save.stats.playMs += performance.now() - G.start; persist(); } G = null; show('home'); };
+$('bFreeze').onclick = () => useBooster('freeze');
+$('bShield').onclick = () => useBooster('shield');
+$('bBolt').onclick = () => useBooster('bolt');
+$('hintBtn').onclick = hint;
+let restartArmed = null;
+$('restartBtn').onclick = () => {
+  if (!G) return;
+  if (G.mode === 'daily'){ $('hintText').textContent = 'Pas de recommencement pendant le Défi du jour.'; return; }
+  if (!G.over && !restartArmed){ $('restartBtn').textContent = '↻ Confirmer ?'; restartArmed = setTimeout(() => { restartArmed = null; $('restartBtn').textContent = '↻ Recommencer'; }, 2500); return; }
+  clearTimeout(restartArmed); restartArmed = null; $('restartBtn').textContent = '↻ Recommencer';
+  if (!G.over){ save.stats.playMs += performance.now() - G.start; save.stats.restarts++; persist(); }
+  startLevel(G.L);
+};
+$('soundBtn').onclick = () => { save.sound = !save.sound; persist(); updateHUD(); };
+$('nextBtn').onclick = () => { overlay('winOv', false); startLevel(G.L + 1); };
+$('doubleBtn').onclick = () => watchAd(() => { save.coins += G.gain; persist(); updateHUD(); $('doubleBtn').style.display = 'none'; $('winGains').insertAdjacentHTML('beforeend', `<div>Pub regardée</div><div>+${G.gain}</div>`); });
+$('reviveBtn').onclick = () => { overlay('failOv', false); watchAd(revive); };
+$('buyBtn').onclick = () => { if (save.coins < 40) return; save.coins -= 40; save.stats.lives++; persist(); overlay('failOv', false); revive(); };
+$('retryBtn').onclick = () => { overlay('failOv', false); startLevel(G.L); };
+window.addEventListener('resize', layout);
+
+renderHome();
+if (!dailyState().claimed) setTimeout(openDaily, 400);
+
+window.__declic = { generate, firstBlock, timeFor, isLocked: t => isLocked(t), get game(){ return G; }, tap, useBooster, get save(){ return save; } };
+})();
+</script>
+</body>
+</html>
